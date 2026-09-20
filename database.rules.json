@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "farm": {
+      ".read": true,
+      ".write": true,
+      "metrics": {
+        ".validate": "newData.hasChildren(['temp', 'humidity'])"
+      },
+      "controls": {
+        ".validate": "newData.hasChildren(['preset', 'humidifier', 'fan', 'cooling'])"
+      }
+    }
+  }
+}
