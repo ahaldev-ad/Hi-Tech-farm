@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { 
-  Thermometer, Droplets, Wind, Fan, Snowflake, 
-  Wifi, HardDrive, Clock, Cpu, ArrowUpRight, 
-  AlertCircle, CheckCircle2, Info, ChevronRight 
+  Thermometer, Droplets, Fan, Snowflake, 
+  HardDrive, Clock, Cpu, ArrowUpRight, 
+  AlertCircle, Info 
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
@@ -13,7 +13,9 @@ export default function MonitoringPage({
   fan, 
   cooling, 
   tempUnit,
-  eventLogs 
+  eventLogs,
+  alerts,
+  activeAlerts = []
 }) {
   const [chartTimeframe, setChartTimeframe] = useState('24h');
 
@@ -28,36 +30,79 @@ export default function MonitoringPage({
   // Filter historical data based on timeframe
   const filteredData = historicalData[chartTimeframe] || historicalData['24h'];
 
+  // Alert check flags
+  const isTempAlert = currentMetrics.temp > alerts.tempHigh || currentMetrics.temp < alerts.tempLow;
+  const isHumidAlert = currentMetrics.humidity > alerts.humidHigh || currentMetrics.humidity < alerts.humidLow;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       
+      {/* 0. Real-time Active Warning Alert Banners */}
+      {activeAlerts.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {activeAlerts.map((alert, idx) => (
+            <div key={idx} style={{
+              padding: '0.75rem 1rem',
+              background: '#FFF3CD',
+              border: '1px solid #FFEBAA',
+              borderRadius: 'var(--radius-sm)',
+              color: '#856404',
+              fontSize: '0.8125rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              boxShadow: 'var(--shadow-sm)'
+            }}>
+              <AlertCircle size={18} style={{ color: '#D97706', flexShrink: 0 }} />
+              <span>{alert.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* 1. Live Primary Environmental Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
         
         {/* Temperature Card */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
+        <div className="card" style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          justify: 'space-between', 
+          position: 'relative', 
+          overflow: 'hidden',
+          borderColor: isTempAlert ? '#FFE4B3' : 'var(--border-color)',
+          background: isTempAlert ? '#FFFDF8' : 'var(--bg-surface)'
+        }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
               <div style={{
                 padding: '0.625rem',
                 borderRadius: 'var(--radius-sm)',
-                background: 'var(--wood-accent-light)',
-                color: 'var(--wood-accent)'
+                background: isTempAlert ? '#FFF6E5' : 'var(--wood-accent-light)',
+                color: isTempAlert ? '#D97706' : 'var(--wood-accent)'
               }}>
                 <Thermometer size={22} />
               </div>
               <div>
                 <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 500 }}>Ambient Temperature</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>Target: {formatTemp(20)}° - {formatTemp(25)}°{tempUnit}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>Alert Limit: {formatTemp(alerts.tempLow)}° - {formatTemp(alerts.tempHigh)}°{tempUnit}</div>
               </div>
             </div>
-            <span className="badge badge-active" style={{ background: '#F8F4EE', color: 'var(--wood-accent)', border: '1px solid #EADBCE' }}>
-              Optimal
-            </span>
+            
+            {isTempAlert ? (
+              <span className="badge badge-warning">
+                <AlertCircle size={12} /> {currentMetrics.temp > alerts.tempHigh ? 'High Temp' : 'Low Temp'}
+              </span>
+            ) : (
+              <span className="badge badge-active" style={{ background: '#F8F4EE', color: 'var(--wood-accent)', border: '1px solid #EADBCE' }}>
+                Optimal
+              </span>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '2.5rem', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text-main)', lineHeight: 1 }}>
+            <span style={{ fontSize: '2.5rem', fontWeight: 700, letterSpacing: '-0.03em', color: isTempAlert ? '#D97706' : 'var(--text-main)', lineHeight: 1 }}>
               {formatTemp(currentMetrics.temp)}
             </span>
             <span style={{ fontSize: '1.25rem', color: 'var(--text-muted)', fontWeight: 500 }}>
@@ -66,35 +111,48 @@ export default function MonitoringPage({
           </div>
 
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-            <ArrowUpRight size={14} style={{ color: '#27AE60' }} />
-            <span>+0.2° in last 30 mins</span>
+            <ArrowUpRight size={14} style={{ color: isTempAlert ? '#D97706' : '#27AE60' }} />
+            <span>Telemetry Live Stream</span>
           </div>
         </div>
 
         {/* Humidity Card */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div className="card" style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          justify: 'space-between',
+          borderColor: isHumidAlert ? '#FFE4B3' : 'var(--border-color)',
+          background: isHumidAlert ? '#FFFDF8' : 'var(--bg-surface)'
+        }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
               <div style={{
                 padding: '0.625rem',
                 borderRadius: 'var(--radius-sm)',
-                background: 'var(--primary-green-light)',
-                color: 'var(--primary-green)'
+                background: isHumidAlert ? '#FFF6E5' : 'var(--primary-green-light)',
+                color: isHumidAlert ? '#D97706' : 'var(--primary-green)'
               }}>
                 <Droplets size={22} />
               </div>
               <div>
                 <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 500 }}>Relative Humidity</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>Target: {humidifier.onThreshold}% - {humidifier.offThreshold}% RH</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>Alert Limit: {alerts.humidLow}% - {alerts.humidHigh}% RH</div>
               </div>
             </div>
-            <span className="badge badge-active">
-              Optimal
-            </span>
+
+            {isHumidAlert ? (
+              <span className="badge badge-warning">
+                <AlertCircle size={12} /> {currentMetrics.humidity > alerts.humidHigh ? 'High RH' : 'Low RH'}
+              </span>
+            ) : (
+              <span className="badge badge-active">
+                Optimal
+              </span>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '2.5rem', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text-main)', lineHeight: 1 }}>
+            <span style={{ fontSize: '2.5rem', fontWeight: 700, letterSpacing: '-0.03em', color: isHumidAlert ? '#D97706' : 'var(--text-main)', lineHeight: 1 }}>
               {currentMetrics.humidity.toFixed(1)}
             </span>
             <span style={{ fontSize: '1.25rem', color: 'var(--text-muted)', fontWeight: 500 }}>
@@ -110,12 +168,12 @@ export default function MonitoringPage({
 
       </div>
 
-      {/* 2. Interactive Historical Trend Line Chart */}
+      {/* 2. Accurate Live Interactive Environmental Trend Line Chart */}
       <div className="card">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
           <div>
             <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>Environmental Trends</h3>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Realtime temperature and humidity historical metrics</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Realtime streaming metrics for temperature and humidity</p>
           </div>
 
           {/* Timeframe Filter Buttons */}
@@ -142,24 +200,24 @@ export default function MonitoringPage({
           </div>
         </div>
 
-        {/* Recharts Chart */}
+        {/* Recharts Chart with Dynamic Data Scales */}
         <div style={{ width: '100%', height: 260 }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={filteredData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="humidityGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2D5A27" stopOpacity={0.25}/>
+                  <stop offset="5%" stopColor="#2D5A27" stopOpacity={0.3}/>
                   <stop offset="95%" stopColor="#2D5A27" stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8C6D46" stopOpacity={0.2}/>
+                  <stop offset="5%" stopColor="#8C6D46" stopOpacity={0.25}/>
                   <stop offset="95%" stopColor="#8C6D46" stopOpacity={0}/>
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#F0EDE5" vertical={false} />
               <XAxis dataKey="time" stroke="#8E998D" fontSize={11} tickLine={false} />
-              <YAxis yAxisId="left" domain={[60, 100]} stroke="#2D5A27" fontSize={11} tickLine={false} unit="%" />
-              <YAxis yAxisId="right" orientation="right" domain={[15, 30]} stroke="#8C6D46" fontSize={11} tickLine={false} unit={`°${tempUnit}`} />
+              <YAxis yAxisId="left" domain={['dataMin - 4', 'dataMax + 4']} stroke="#2D5A27" fontSize={11} tickLine={false} unit="%" />
+              <YAxis yAxisId="right" orientation="right" domain={['dataMin - 2', 'dataMax + 2']} stroke="#8C6D46" fontSize={11} tickLine={false} unit={`°${tempUnit}`} />
               <Tooltip 
                 contentStyle={{ 
                   background: '#FFFFFF', 
@@ -169,8 +227,8 @@ export default function MonitoringPage({
                   boxShadow: 'var(--shadow-md)'
                 }} 
               />
-              <Area yAxisId="left" type="monotone" dataKey="humidity" name="Humidity (% RH)" stroke="#2D5A27" strokeWidth={2} fillOpacity={1} fill="url(#humidityGrad)" />
-              <Area yAxisId="right" type="monotone" dataKey={tempUnit === 'F' ? 'tempF' : 'temp'} name={`Temp (°${tempUnit})`} stroke="#8C6D46" strokeWidth={2} fillOpacity={1} fill="url(#tempGrad)" />
+              <Area yAxisId="left" type="monotone" dataKey="humidity" name="Humidity (% RH)" stroke="#2D5A27" strokeWidth={2.2} fillOpacity={1} fill="url(#humidityGrad)" />
+              <Area yAxisId="right" type="monotone" dataKey={tempUnit === 'F' ? 'tempF' : 'temp'} name={`Temp (°${tempUnit})`} stroke="#8C6D46" strokeWidth={2.2} fillOpacity={1} fill="url(#tempGrad)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -228,7 +286,7 @@ export default function MonitoringPage({
               <div>
                 <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Exhaust Fan</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  {fan.mode === 'TIMER' ? `Phase: ${fan.phase} (${Math.floor(fan.remainingSeconds / 60)}m ${fan.remainingSeconds % 60}s left)` : `Mode: ${fan.mode}`}
+                  Mode: {fan.mode}
                 </div>
               </div>
             </div>

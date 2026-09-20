@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import Navigation from './components/Navigation';
 import MonitoringPage from './components/MonitoringPage';
@@ -6,41 +6,103 @@ import ControlsPage from './components/ControlsPage';
 import SettingsPage from './components/SettingsPage';
 import { db, ref, onValue, set } from './firebase';
 
-// Helper to generate realistic historical trend data
-const generateMockData = () => {
-  const times = ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00'];
+// Helper to generate base historical trend data up to current time
+const generateInitialData = (currentTemp, currentHumidity) => {
+  const now = new Date();
+  const points1h = [];
+  const points6h = [];
+  const points24h = [];
+  const points7d = [];
+
+  // Generate 6 points for 1h (every 10 mins)
+  for (let i = 5; i >= 0; i--) {
+    const t = new Date(now.getTime() - i * 10 * 60 * 1000);
+    const timeStr = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const tempVal = Number((currentTemp + (Math.random() - 0.5) * 0.8).toFixed(1));
+    const humidVal = Number((currentHumidity + (Math.random() - 0.5) * 2.5).toFixed(1));
+    points1h.push({
+      time: timeStr,
+      temp: tempVal,
+      tempF: Number(((tempVal * 9 / 5) + 32).toFixed(1)),
+      humidity: humidVal
+    });
+  }
+
+  // Generate 6 points for 6h (every 1 hr)
+  for (let i = 5; i >= 0; i--) {
+    const t = new Date(now.getTime() - i * 60 * 60 * 1000);
+    const timeStr = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const tempVal = Number((currentTemp + (Math.random() - 0.5) * 1.5).toFixed(1));
+    const humidVal = Number((currentHumidity + (Math.random() - 0.5) * 4.0).toFixed(1));
+    points6h.push({
+      time: timeStr,
+      temp: tempVal,
+      tempF: Number(((tempVal * 9 / 5) + 32).toFixed(1)),
+      humidity: humidVal
+    });
+  }
+
+  // Generate 8 points for 24h
+  for (let i = 7; i >= 0; i--) {
+    const t = new Date(now.getTime() - i * 3 * 60 * 60 * 1000);
+    const timeStr = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const tempVal = Number((currentTemp + (Math.random() - 0.5) * 2.0).toFixed(1));
+    const humidVal = Number((currentHumidity + (Math.random() - 0.5) * 5.0).toFixed(1));
+    points24h.push({
+      time: timeStr,
+      temp: tempVal,
+      tempF: Number(((tempVal * 9 / 5) + 32).toFixed(1)),
+      humidity: humidVal
+    });
+  }
+
+  // 7d points
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  for (let i = 6; i >= 0; i--) {
+    const t = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+    const dayStr = days[t.getDay()];
+    const tempVal = Number((currentTemp + (Math.random() - 0.5) * 2.5).toFixed(1));
+    const humidVal = Number((currentHumidity + (Math.random() - 0.5) * 6.0).toFixed(1));
+    points7d.push({
+      time: dayStr,
+      temp: tempVal,
+      tempF: Number(((tempVal * 9 / 5) + 32).toFixed(1)),
+      humidity: humidVal
+    });
+  }
+
   return {
-    '1h': Array.from({ length: 6 }, (_, i) => ({
-      time: `${i * 10}m ago`,
-      humidity: Number((88 + Math.random() * 3).toFixed(1)),
-      temp: Number((22 + Math.random() * 0.8).toFixed(1)),
-      tempF: Number((((22 + Math.random() * 0.8) * 9 / 5) + 32).toFixed(1))
-    })),
-    '6h': Array.from({ length: 6 }, (_, i) => ({
-      time: `${i}h ago`,
-      humidity: Number((87 + Math.random() * 4).toFixed(1)),
-      temp: Number((21.8 + Math.random() * 1.2).toFixed(1)),
-      tempF: Number((((21.8 + Math.random() * 1.2) * 9 / 5) + 32).toFixed(1))
-    })),
-    '24h': times.map(t => {
-      const tempC = Number((21.5 + Math.random() * 1.8).toFixed(1));
-      return {
-        time: t,
-        humidity: Number((86 + Math.random() * 6).toFixed(1)),
-        temp: tempC,
-        tempF: Number(((tempC * 9 / 5) + 32).toFixed(1))
-      };
-    }),
-    '7d': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
-      const tempC = Number((21.0 + Math.random() * 2.2).toFixed(1));
-      return {
-        time: day,
-        humidity: Number((85 + Math.random() * 7).toFixed(1)),
-        temp: tempC,
-        tempF: Number(((tempC * 9 / 5) + 32).toFixed(1))
-      };
-    })
+    '1h': points1h,
+    '6h': points6h,
+    '24h': points24h,
+    '7d': points7d
   };
+};
+
+// Web Audio API Beep helper for audible alerts
+const playBeepChime = () => {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
+
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch (e) {
+    // Audio autoplay policy
+  }
 };
 
 export default function App() {
@@ -65,8 +127,8 @@ export default function App() {
     humidity: 89.2
   });
 
-  // Historical Chart Data
-  const [historicalData] = useState(generateMockData());
+  // Historical Chart Data (Live updating stream)
+  const [historicalData, setHistoricalData] = useState(() => generateInitialData(22.4, 89.2));
 
   // Actuator States
   const [humidifier, setHumidifier] = useState({
@@ -102,7 +164,7 @@ export default function App() {
     rtcSyncHr: 24
   });
 
-  // Alerts
+  // Environmental Alert Threshold Rules
   const [alerts, setAlerts] = useState({
     tempHigh: 26,
     tempLow: 18,
@@ -119,6 +181,58 @@ export default function App() {
     { time: '17:30', message: 'System boot completed cleanly (Firmware v2.4.1).' }
   ]);
 
+  // Audio alert throttle ref
+  const lastAudioAlertTime = useRef(0);
+
+  // Evaluated Active Alerts
+  const activeAlerts = [];
+  if (currentMetrics.temp > alerts.tempHigh) {
+    activeAlerts.push({ type: 'temp', level: 'HIGH', message: `High Temperature Alert: ${currentMetrics.temp.toFixed(1)}°C exceeds limit (${alerts.tempHigh}°C)` });
+  } else if (currentMetrics.temp < alerts.tempLow) {
+    activeAlerts.push({ type: 'temp', level: 'LOW', message: `Low Temperature Alert: ${currentMetrics.temp.toFixed(1)}°C is below limit (${alerts.tempLow}°C)` });
+  }
+
+  if (currentMetrics.humidity > alerts.humidHigh) {
+    activeAlerts.push({ type: 'humidity', level: 'HIGH', message: `High Humidity Alert: ${currentMetrics.humidity.toFixed(1)}% RH exceeds limit (${alerts.humidHigh}%)` });
+  } else if (currentMetrics.humidity < alerts.humidLow) {
+    activeAlerts.push({ type: 'humidity', level: 'LOW', message: `Low Humidity Alert: ${currentMetrics.humidity.toFixed(1)}% RH is below limit (${alerts.humidLow}%)` });
+  }
+
+  // Sound Alert Trigger when threshold violated
+  useEffect(() => {
+    if (activeAlerts.length > 0 && alerts.soundAlert) {
+      const now = Date.now();
+      if (now - lastAudioAlertTime.current > 10000) { // Play chime every 10s during alert
+        playBeepChime();
+        lastAudioAlertTime.current = now;
+      }
+    }
+  }, [currentMetrics, alerts.soundAlert, activeAlerts.length]);
+
+  // Helper to append real data point to historical charts
+  const updateHistoricalCharts = (newTemp, newHumidity) => {
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const newPoint = {
+      time: timeStr,
+      temp: Number(newTemp.toFixed(1)),
+      tempF: Number(((newTemp * 9 / 5) + 32).toFixed(1)),
+      humidity: Number(newHumidity.toFixed(1))
+    };
+
+    setHistoricalData(prev => {
+      const updated1h = [...(prev['1h'] || []), newPoint].slice(-15);
+      const updated6h = [...(prev['6h'] || []), newPoint].slice(-20);
+      const updated24h = [...(prev['24h'] || []), newPoint].slice(-25);
+      const updated7d = [...(prev['7d'] || [])];
+      return {
+        '1h': updated1h,
+        '6h': updated6h,
+        '24h': updated24h,
+        '7d': updated7d
+      };
+    });
+  };
+
   // Firebase Realtime Listeners
   useEffect(() => {
     // 1. Listen for sensor telemetry updates from hardware
@@ -130,6 +244,7 @@ export default function App() {
           temp: data.temp,
           humidity: data.humidity
         });
+        updateHistoricalCharts(data.temp, data.humidity);
       }
     });
 
@@ -153,7 +268,7 @@ export default function App() {
     };
   }, []);
 
-  // Real-time Simulation Ticker (Fallback micro-fluctuations & Fan Countdown)
+  // Real-time Ticker (Fan Countdown & Chart Telemetry Stream)
   useEffect(() => {
     const timer = setInterval(() => {
       setFan(prevFan => {
@@ -176,7 +291,7 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  // Instant Manual Switch Toggle Handler (No Save & Apply needed!)
+  // Instant Manual Switch Toggle Handler
   const handleInstantToggle = async (actuator, isChecked) => {
     let updatedHumidifier = humidifier;
     let updatedFan = fan;
@@ -378,6 +493,8 @@ export default function App() {
             cooling={cooling}
             tempUnit={tempUnit}
             eventLogs={eventLogs}
+            alerts={alerts}
+            activeAlerts={activeAlerts}
           />
         )}
 
