@@ -1,7 +1,7 @@
 import React from 'react';
-import { Sprout, Wifi, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Sprout } from 'lucide-react';
 
-export default function Header({ configVersion, isSyncing, activeTab, setActiveTab }) {
+export default function Header({ activeTab, setActiveTab }) {
   return (
     <header style={{
       background: 'var(--bg-surface)',
@@ -17,10 +17,10 @@ export default function Header({ configVersion, isSyncing, activeTab, setActiveT
         margin: '0 auto',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justify: 'space-between',
         gap: '1rem'
       }}>
-        {/* Brand & Status */}
+        {/* Brand Title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{
             width: '38px',
@@ -36,14 +36,9 @@ export default function Header({ configVersion, isSyncing, activeTab, setActiveT
             <Sprout size={22} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <h1 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                Paradise Mushroom
-              </h1>
-              <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>
-                <span className="live-dot" /> Online
-              </span>
-            </div>
+            <h1 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+              Paradise Mushroom
+            </h1>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
               Hi-Tech Farm Dashboard
             </p>
@@ -85,27 +80,6 @@ export default function Header({ configVersion, isSyncing, activeTab, setActiveT
             </button>
           ))}
         </nav>
-
-        {/* System Meta & Config Badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {/* Config Version Sync Pill */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.375rem',
-            padding: '0.375rem 0.75rem',
-            background: 'var(--wood-accent-light)',
-            border: '1px solid #E6DDD0',
-            borderRadius: 'var(--radius-full)',
-            fontSize: '0.75rem',
-            color: 'var(--wood-accent)',
-            fontWeight: 600
-          }}>
-            <ShieldCheck size={14} />
-            <span>Config {configVersion}</span>
-            {isSyncing && <RefreshCw size={12} className="spin-icon" style={{ animation: 'spin 1s linear infinite' }} />}
-          </div>
-        </div>
       </div>
 
       <style>{`
@@ -113,10 +87,6 @@ export default function Header({ configVersion, isSyncing, activeTab, setActiveT
           .desktop-nav-tabs {
             display: flex !important;
           }
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
         }
       `}</style>
     </header>
