@@ -4,6 +4,7 @@ import Navigation from './components/Navigation';
 import MonitoringPage from './components/MonitoringPage';
 import ControlsPage from './components/ControlsPage';
 import SettingsPage from './components/SettingsPage';
+import AdminAuthModal from './components/AdminAuthModal';
 import { db, ref, onValue, set } from './firebase';
 
 // Helper to generate base historical trend data up to current time
@@ -106,6 +107,7 @@ const playBeepChime = () => {
 };
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('paradise_admin_authenticated') === 'true');
   const [activeTab, setActiveTab] = useState('monitoring');
   const [tempUnit, setTempUnit] = useState('C');
   const [preset, setPreset] = useState('fruiting');
@@ -202,7 +204,7 @@ export default function App() {
   useEffect(() => {
     if (activeAlerts.length > 0 && alerts.soundAlert) {
       const now = Date.now();
-      if (now - lastAudioAlertTime.current > 10000) { // Play chime every 10s during alert
+      if (now - lastAudioAlertTime.current > 10000) {
         playBeepChime();
         lastAudioAlertTime.current = now;
       }
@@ -235,7 +237,6 @@ export default function App() {
 
   // Firebase Realtime Listeners
   useEffect(() => {
-    // 1. Listen for sensor telemetry updates from hardware
     const metricsRef = ref(db, 'farm/metrics');
     const unsubscribeMetrics = onValue(metricsRef, (snapshot) => {
       const data = snapshot.val();
@@ -248,7 +249,6 @@ export default function App() {
       }
     });
 
-    // 2. Listen for remote control updates from Firebase
     const controlsRef = ref(db, 'farm/controls');
     const unsubscribeControls = onValue(controlsRef, (snapshot) => {
       const data = snapshot.val();
@@ -398,7 +398,6 @@ export default function App() {
         alerts
       };
 
-      // Write to Firebase Realtime Database
       await set(ref(db, 'farm/controls'), payload);
       await set(ref(db, 'farm/metrics'), {
         temp: currentMetrics.temp,
@@ -422,6 +421,12 @@ export default function App() {
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  // Lock session handler
+  const handleLockSession = () => {
+    localStorage.removeItem('paradise_admin_authenticated');
+    setIsAuthenticated(false);
   };
 
   // Export JSON
@@ -468,6 +473,11 @@ export default function App() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       
+      {/* Admin Password Gate Modal */}
+      {!isAuthenticated && (
+        <AdminAuthModal onAuthenticate={() => setIsAuthenticated(true)} />
+      )}
+
       {/* Header */}
       <Header 
         configVersion={`v${config.version}`}
@@ -529,6 +539,7 @@ export default function App() {
             resetToDefaults={resetToDefaults}
             exportConfigJson={exportConfigJson}
             importConfigJson={importConfigJson}
+            handleLockSession={handleLockSession}
           />
         )}
       </main>

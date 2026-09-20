@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
-  Settings, Cpu, Cloud, Wifi, Bell, 
-  Download, Upload, RotateCcw, Check, ShieldCheck, Database 
+  Settings, Cpu, Cloud, Bell, 
+  Download, Upload, RotateCcw, Check, ShieldCheck, Lock 
 } from 'lucide-react';
 
 export default function SettingsPage({ 
@@ -13,7 +13,8 @@ export default function SettingsPage({
   setTempUnit, 
   resetToDefaults, 
   exportConfigJson, 
-  importConfigJson 
+  importConfigJson,
+  handleLockSession 
 }) {
   const [saveToast, setSaveToast] = useState(false);
 
@@ -109,7 +110,7 @@ export default function SettingsPage({
               <input
                 type="text"
                 className="form-input"
-                value="https://api.mycofarm.local/v1/sync"
+                value="https://hi-tech-farm-default-rtdb.firebaseio.com"
                 readOnly
               />
             </div>
@@ -180,11 +181,11 @@ export default function SettingsPage({
 
       </div>
 
-      {/* 5. System Preferences & Backup Actions */}
+      {/* 4. System Preferences & Backup Actions */}
       <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h3 style={{ fontSize: '0.9375rem', fontWeight: 600 }}>Configuration Management</h3>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Export, import, or reset farm parameters</p>
+          <h3 style={{ fontSize: '0.9375rem', fontWeight: 600 }}>Configuration & Access Security</h3>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Export parameters or lock current device session</p>
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -198,6 +199,11 @@ export default function SettingsPage({
             <span>Import JSON</span>
             <input type="file" accept=".json" onChange={importConfigJson} style={{ display: 'none' }} />
           </label>
+
+          <button onClick={handleLockSession} className="btn btn-secondary" style={{ color: '#D97706', borderColor: '#FFE4B3' }}>
+            <Lock size={16} />
+            <span>Lock Admin Session</span>
+          </button>
 
           <button onClick={resetToDefaults} className="btn btn-secondary" style={{ color: '#C0392B', borderColor: '#F5C6CB' }}>
             <RotateCcw size={16} />
