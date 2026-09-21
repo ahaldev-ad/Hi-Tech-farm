@@ -1,4 +1,4 @@
-// Web & Phone Push Notification Helper
+// Web & High-Priority Phone Push Notification Helper
 
 export const registerServiceWorker = async () => {
   if ('serviceWorker' in navigator) {
@@ -23,8 +23,8 @@ export const requestNotificationPermission = async () => {
   if (permission === 'granted') {
     await registerServiceWorker();
     sendPhonePushNotification(
-      '🟢 Phone Alerts Enabled',
-      'You will receive instant pop-up notifications on your phone when environmental thresholds are breached!'
+      '🟢 Critical Phone Alerts Enabled',
+      'High-priority alerts will now pop up on your phone with vibration and lock screen visibility!'
     );
     return true;
   } else {
@@ -36,20 +36,28 @@ export const requestNotificationPermission = async () => {
 export const sendPhonePushNotification = async (title, body) => {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
+  const formattedTitle = title.includes('🚨') ? title : `🚨 CRITICAL ALERT: ${title}`;
+
   if ('serviceWorker' in navigator) {
     const registration = await navigator.serviceWorker.ready;
     if (registration) {
-      registration.showNotification(title, {
+      registration.showNotification(formattedTitle, {
         body: body,
         icon: '/favicon.svg',
         badge: '/favicon.svg',
-        vibrate: [200, 100, 200],
-        tag: 'paradise-alert'
+        vibrate: [500, 100, 500, 100, 500, 100, 1000], // Heavy attention vibration pulse
+        requireInteraction: true,                       // Keeps notification pinned on screen until dismissed!
+        renotify: true,                                 // Re-triggers alert sound and vibration
+        tag: 'critical-paradise-alert'
       });
       return;
     }
   }
 
   // Fallback
-  new Notification(title, { body, icon: '/favicon.svg' });
+  new Notification(formattedTitle, { 
+    body, 
+    icon: '/favicon.svg',
+    requireInteraction: true
+  });
 };

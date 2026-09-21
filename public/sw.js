@@ -1,4 +1,4 @@
-// Service Worker for Background Phone Push Notifications
+// Service Worker for High-Priority Background Phone Push Notifications
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
@@ -7,9 +7,9 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// Handle background push event
+// Handle high-priority background push event
 self.addEventListener('push', (event) => {
-  let data = { title: '⚠️ Paradise Mushroom Alert', body: 'Environmental threshold exceeded!' };
+  let data = { title: '🚨 CRITICAL ALERT: Paradise Mushroom', body: 'Environmental threshold breached!' };
   if (event.data) {
     try {
       data = event.data.json();
@@ -19,18 +19,21 @@ self.addEventListener('push', (event) => {
   }
 
   const options = {
-    body: data.body || 'Environmental threshold exceeded!',
+    body: data.body || 'Environmental threshold breached!',
     icon: '/favicon.svg',
     badge: '/favicon.svg',
-    vibrate: [200, 100, 200, 100, 200],
-    data: { dateOfArrival: Date.now() },
+    vibrate: [500, 100, 500, 100, 500, 100, 1000], // Heavy attention vibration pulse
+    requireInteraction: true,                       // Forces notification to stay on screen until user interacts!
+    renotify: true,                                 // Re-triggers alert sound and vibration for new alerts
+    tag: 'critical-paradise-alert',
+    timestamp: Date.now(),
     actions: [
       { action: 'open', title: 'Open Dashboard' }
     ]
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || '⚠️ Paradise Mushroom Alert', options)
+    self.registration.showNotification(data.title || '🚨 CRITICAL ALERT: Paradise Mushroom', options)
   );
 });
 
