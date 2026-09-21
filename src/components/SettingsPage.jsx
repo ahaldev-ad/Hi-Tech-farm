@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { 
   Settings, Cpu, Cloud, Bell, 
-  Download, Upload, RotateCcw, Check, ShieldCheck, Lock 
+  Download, Upload, RotateCcw, Check, ShieldCheck, Lock, Smartphone 
 } from 'lucide-react';
+import { requestNotificationPermission } from '../utils/notification';
 
 export default function SettingsPage({ 
   config, 
@@ -21,6 +22,10 @@ export default function SettingsPage({
   const handleSaveSettings = () => {
     setSaveToast(true);
     setTimeout(() => setSaveToast(false), 2500);
+  };
+
+  const handleEnablePhonePush = async () => {
+    await requestNotificationPermission();
   };
 
   return (
@@ -166,16 +171,29 @@ export default function SettingsPage({
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle)' }}>
-            <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Sound Alerts</span>
-            <label className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={alerts.soundAlert}
-                onChange={(e) => setAlerts({ ...alerts, soundAlert: e.target.checked })}
-              />
-              <span className="slider"></span>
-            </label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>In-App Audio Chime Alerts</span>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={alerts.soundAlert}
+                  onChange={(e) => setAlerts({ ...alerts, soundAlert: e.target.checked })}
+                />
+                <span className="slider"></span>
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.25rem' }}>
+              <div>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 600 }}>Phone Pop-up Push Alerts</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Background OS pop-up notifications</div>
+              </div>
+              <button onClick={handleEnablePhonePush} className="btn btn-secondary btn-sm" style={{ gap: '0.375rem' }}>
+                <Smartphone size={14} />
+                <span>Enable Push</span>
+              </button>
+            </div>
           </div>
         </div>
 

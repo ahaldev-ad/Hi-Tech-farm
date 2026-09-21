@@ -1,6 +1,6 @@
 # IoT Device Firebase Realtime Database Architecture & Implementation Guide
 
-This guide provides the complete database architecture, JSON schema, and sample code snippets for programming your IoT hardware controller (ESP32, ESP8266, or Raspberry Pi) to communicate with the **Paradise Mushroom Web Dashboard**.
+This guide provides the complete database architecture, JSON schema, sample code snippets, and background push notification setup for programming your IoT hardware controller (ESP32, ESP8266, or Raspberry Pi) to communicate with the **Paradise Mushroom Web Dashboard**.
 
 ---
 
@@ -46,52 +46,20 @@ farm/
 
 ---
 
-## 2. Complete JSON Database Example Payload
+## 2. Background Phone Push Notifications Architecture
 
-```json
-{
-  "farm": {
-    "metrics": {
-      "temp": 22.4,
-      "humidity": 89.2,
-      "timestamp": 1789910220957
-    },
-    "controls": {
-      "preset": "fruiting",
-      "humidifier": {
-        "mode": "AUTO",
-        "onThreshold": 88,
-        "offThreshold": 95,
-        "manualState": true,
-        "status": "ACTIVE"
-      },
-      "fan": {
-        "mode": "TIMER",
-        "onDuration": 10,
-        "offDuration": 10,
-        "manualState": true,
-        "status": "ACTIVE"
-      },
-      "cooling": {
-        "mode": "MANUAL",
-        "status": "OFF"
-      },
-      "config": {
-        "version": 3,
-        "hardwareSamplingSec": 5,
-        "logIntervalMin": 15,
-        "rtcSyncHr": 24
-      },
-      "customValues": {
-        "humidOn": 88,
-        "humidOff": 95,
-        "fanOn": 10,
-        "fanOff": 10
-      }
-    }
-  }
-}
-```
+Yes! You can receive native pop-up push notifications on your phone **even when the web dashboard is closed or running in the background**.
+
+### How it works:
+1. **Service Worker (`public/sw.js`)**: Installed automatically in your phone's browser when you visit the dashboard. It listens for background alerts 24/7.
+2. **Web Push API / FCM (Firebase Cloud Messaging)**:
+   - When your ESP32 or Raspberry Pi detects an environmental threshold breach (`temp > tempHigh` or `humidity < humidLow`), it writes to `farm/metrics` or triggers a Firebase Cloud Messaging (FCM) HTTP request.
+   - The Service Worker triggers a native OS pop-up alert with vibration (`vibrate: [200, 100, 200]`).
+
+### Phone Setup:
+1. Open the dashboard on your phone.
+2. Go to **Settings** -> **Environmental Alert Rules**.
+3. Tap **Enable Push** (`Enable Phone Push Alerts`) and select **Allow** when your browser prompts for notification permissions.
 
 ---
 

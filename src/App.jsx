@@ -6,6 +6,7 @@ import ControlsPage from './components/ControlsPage';
 import SettingsPage from './components/SettingsPage';
 import AdminAuthModal from './components/AdminAuthModal';
 import { db, ref, onValue, set } from './firebase';
+import { registerServiceWorker, sendPhonePushNotification } from './utils/notification';
 
 // Helper to generate base historical trend data up to current time
 const generateInitialData = (currentTemp, currentHumidity) => {
@@ -183,15 +184,20 @@ export default function App() {
     { time: '17:30', message: 'System boot completed cleanly (Firmware v2.4.1).' }
   ]);
 
+  // Register Service Worker for phone push notifications on mount
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
+
   // Audio alert throttle ref
   const lastAudioAlertTime = useRef(0);
 
   // Evaluated Active Alerts
   const activeAlerts = [];
   if (currentMetrics.temp > alerts.tempHigh) {
-    activeAlerts.push({ type: 'temp', level: 'HIGH', message: `High Temperature Alert: ${currentMetrics.temp.toFixed(1)}°C exceeds limit (${alerts.tempHigh}°C)` });
+    activeAlerts.push({ type: 'temp', level: 'HIGH', message: `High Temp Alert: ${currentMetrics.temp.toFixed(1)}°C exceeds limit (${alerts.tempHigh}°C)` });
   } else if (currentMetrics.temp < alerts.tempLow) {
-    activeAlerts.push({ type: 'temp', level: 'LOW', message: `Low Temperature Alert: ${currentMetrics.temp.toFixed(1)}°C is below limit (${alerts.tempLow}°C)` });
+    activeAlerts.push({ type: 'temp', level: 'LOW', message: `Low Temp Alert: ${currentMetrics.temp.toFixed(1)}°C is below limit (${alerts.tempLow}°C)` });
   }
 
   if (currentMetrics.humidity > alerts.humidHigh) {
@@ -200,12 +206,15 @@ export default function App() {
     activeAlerts.push({ type: 'humidity', level: 'LOW', message: `Low Humidity Alert: ${currentMetrics.humidity.toFixed(1)}% RH is below limit (${alerts.humidLow}%)` });
   }
 
-  // Sound Alert Trigger when threshold violated
+  // Sound & Phone Push Alert Trigger when threshold violated
   useEffect(() => {
-    if (activeAlerts.length > 0 && alerts.soundAlert) {
+    if (activeAlerts.length > 0) {
       const now = Date.now();
       if (now - lastAudioAlertTime.current > 10000) {
-        playBeepChime();
+        if (alerts.soundAlert) {
+          playBeepChime();
+        }
+        sendPhonePushNotification('⚠️ Paradise Mushroom Alert', activeAlerts[0].message);
         lastAudioAlertTime.current = now;
       }
     }
